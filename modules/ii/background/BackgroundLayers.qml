@@ -161,7 +161,7 @@ WidgetsLoader {
     // panels, menus, popups, notifications or any normal window/fullscreen app.
     Timer {
         id: cursorPollTimer
-        interval: 33
+        interval: 100
         repeat: true
         running: Config.options.background.depthEffect.enable
                  && Config.options.background.depthEffect.mouseParallax
@@ -254,9 +254,14 @@ WidgetsLoader {
         depthAutoComposeTimer.restart();
     }
 
+    property bool _composeDebounce: false
+
     function depthAutoCompose() {
         if (!Config.options.background.depthEffect.enable || !root.isPrimary) return;
-        // Refresh from config first so we always read the latest layer images.
+        if (root._composeDebounce) return;
+        root._composeDebounce = true;
+        Qt.callLater(() => { root._composeDebounce = false; });
+
         root.refreshDepthLayers();
         if (layerCompositeProc.running) {
             root.scheduleDepthAutoCompose();
@@ -588,8 +593,9 @@ WidgetsLoader {
                 transform: Translate {
                     x: layerItem.parallaxX
                     y: layerItem.parallaxY
-                }
-            }
-        }
+}
     }
+}
+}
+}
 }
