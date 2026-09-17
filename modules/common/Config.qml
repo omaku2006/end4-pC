@@ -242,6 +242,10 @@ Singleton {
                     property real blurRadius: 32
                     property list<var> customWidgetIds: []
                     property list<var> customWidgets: []
+                    // Widget-to-widget stacking order (config keys, back -> front).
+                    // Kept here so overlapping widgets keep their front/back
+                    // arrangement across restarts.
+                    property list<var> widgetStackOrder: []
                     property JsonObject clock: JsonObject {
                         property bool enable: true
                         property bool showOnlyWhenLocked: false

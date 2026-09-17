@@ -71,7 +71,12 @@ AbstractWidget {
         const raw = root.configEntry?.depthLayerPosition ?? -1
         return (raw > 0 && raw <= root.depthLayerCount) ? raw : root.depthLayerCount
     }
-    z: root.pinnedBottom ? -1000 : root.depthPosition - 0.5
+    // Small sub-order within the widget's layer slot, so overlapping widgets
+    // sharing a layer can be ordered without crossing wallpaper layers.
+    readonly property real stackOffset: (root.canvas && typeof root.canvas.stackOffset === "function")
+        ? root.canvas.stackOffset(root.configEntryName)
+        : 0
+    z: root.pinnedBottom ? -1000 : root.depthPosition - 0.5 + root.stackOffset
 
     // Ordered back-to-front scene items strictly beneath this card (base
     // wallpaper, then depth layers below this widget's slot) for

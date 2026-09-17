@@ -19,7 +19,8 @@ import QtQuick
  *   ss s      second (padded / bare)
  *   a         AM/PM
  *
- * Anything else passes through literally.
+ * Anything else passes through literally.  Text wrapped in double quotes
+ * is copied verbatim, so "HH" prints HH instead of the current hour.
  */
 QtObject {
     id: root
@@ -63,6 +64,15 @@ QtObject {
         let result = ""
         let i = 0
         while (i < pattern.length) {
+            // Double quotes escape their contents: "HH" -> HH, not the hour.
+            if (pattern.charAt(i) === '"') {
+                const close = pattern.indexOf('"', i + 1)
+                if (close !== -1) {
+                    result += pattern.substring(i + 1, close)
+                    i = close + 1
+                    continue
+                }
+            }
             let matched = false
             for (let len = 4; len >= 1; len--) {
                 const token = pattern.substring(i, i + len)

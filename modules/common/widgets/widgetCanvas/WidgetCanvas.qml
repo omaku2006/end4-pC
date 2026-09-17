@@ -46,9 +46,11 @@ MouseArea {
         root.registeredWidgets = root.registeredWidgets.filter(w => w !== widget)
     }
 
-    // Widgets are positioned RELATIVE to the depth wallpaper layers, so the
-    // canvas no longer maintains a widget-to-widget stack. Movement is a pure
-    // layer-relative operation: forward = one layer toward the front.
+    // Widgets are positioned RELATIVE to the depth wallpaper layers. Layer
+    // movement stays a pure layer-relative operation (forward = one layer
+    // toward the front). On top of that, widgets sharing a layer carry a small
+    // sub-order so overlapping widgets can be raised/lowered among themselves
+    // without ever crossing a wallpaper layer.
     readonly property real depthLayerCount: Math.max(1, (Config.options.background.depthEffect.layers ?? []).length)
 
     function widgetByConfigName(key) {
@@ -88,38 +90,102 @@ MouseArea {
         return (raw > 0 && raw <= root.depthLayerCount) ? raw : root.depthLayerCount
     }
 
+    // ── Widget-to-widget stacking (persisted, back -> front) ──────────────
+    // The order list lives in config so overlapping widgets keep their
+    // arrangement across restarts. Keys missing from the list (never
+    // reordered) keep their registration order after the listed ones, i.e.
+    // they default to the front.
+    function stackOrderKeys() {
+        const keys = root.registeredWidgets.map(w => w.configEntryName)
+        const listed = (Config.options.background.widgets.widgetStackOrder ?? []).filter(k => keys.includes(k))
+        return listed.concat(keys.filter(k => !listed.includes(k)))
+    }
+
+    // Offset added to a widget's layer-slot z. Mapped to (-0.4, 0.4) so it
+    // always stays inside the slot (layer z is an integer; the widget slot
+    // for depthPosition k is the open interval (k-1, k)).
+    function stackOffset(key) {
+        const keys = root.stackOrderKeys()
+        const n = keys.length
+        if (n <= 1) return 0
+        const rank = keys.indexOf(key)
+        if (rank < 0) return 0
+        return ((rank + 1) / (n + 1)) * 0.8 - 0.4
+    }
+
+    function _persistStackOrder(order) {
+        // Keep keys belonging to other contexts (e.g. other screens) so this
+        // screen's reorder never drops them.
+        const known = root.registeredWidgets.map(w => w.configEntryName)
+        const others = (Config.options.background.widgets.widgetStackOrder ?? []).filter(k => !known.includes(k))
+        Config.options.background.widgets.widgetStackOrder = order.concat(others)
+    }
+
+    function _reorderStack(key, toFront) {
+        const keys = root.stackOrderKeys().filter(k => k !== key)
+        if (toFront) keys.push(key)
+        else keys.unshift(key)
+        root._persistStackOrder(keys)
+    }
+
+    // The widgets sharing this key's layer, back -> front. Widget order only
+    // matters within one layer, since a one-step z difference between layers
+    // always dominates the sub-order offset.
+    function _sameDepthGroup(key) {
+        const pos = root.effectiveDepthPosition(key)
+        return root.stackOrderKeys().filter(k => {
+            const w = root.widgetByConfigName(k)
+            return w && !w.pinnedBottom && root.effectiveDepthPosition(k) === pos
+        })
+    }
+
+    // Layers first: a widget can always step toward the front while it is not
+    // on the front-most layer; once there, it can be raised above the other
+    // widgets sharing that layer.
     function canMoveFront(key) {
         if (root.widgetByConfigName(key)?.pinnedBottom) return false
-        const w = root.widgetByConfigName(key)
-        return root.effectiveDepthPosition(key) < root.depthLayerCount
+        if (root.effectiveDepthPosition(key) < root.depthLayerCount) return true
+        const group = root._sameDepthGroup(key)
+        return group.length > 1 && group.indexOf(key) < group.length - 1
     }
 
     function canMoveBack(key) {
         if (root.widgetByConfigName(key)?.pinnedBottom) return false
-        return root.effectiveDepthPosition(key) > 1
+        if (root.effectiveDepthPosition(key) > 1) return true
+        const group = root._sameDepthGroup(key)
+        return group.length > 1 && group.indexOf(key) > 0
     }
 
-    // Move the widget one wallpaper layer toward the front. Stops at the
-    // position above the highest wallpaper layer.
+    // Layers first, then widget order: step one layer toward the front while
+    // not on the front-most layer; once there, raise the widget above the
+    // others sharing that layer.
     function moveLayerFront(widget) {
         if (widget?.pinnedBottom) return
-        const pos = Math.min(root.depthLayerCount, root.effectiveDepthPosition(widget.configEntryName) + 1)
-        const entry = root.widgetEntryFromConfig(widget.configEntryName)
-        if (!entry) return
-        entry.depthLayerPosition = pos
-        if (root.isCustomWidgetKey(widget.configEntryName)) root.persistCustomWidget(entry)
+        const key = widget.configEntryName
+        if (root.effectiveDepthPosition(key) < root.depthLayerCount) {
+            const entry = root.widgetEntryFromConfig(key)
+            if (!entry) return
+            entry.depthLayerPosition = root.effectiveDepthPosition(key) + 1
+            if (root.isCustomWidgetKey(key)) root.persistCustomWidget(entry)
+        } else {
+            root._reorderStack(key, true)
+        }
     }
 
-    // Move the widget one wallpaper layer toward the back. The first click
-    // from the default (above-highest) position drops it right behind the
-    // highest layer; it can never go below the background layer.
+    // Mirror of moveLayerFront toward the back: the first click from the
+    // default (above-highest) position drops it right behind the highest
+    // layer; on the back-most layer it lowers the widget below its peers.
     function moveLayerBack(widget) {
         if (widget?.pinnedBottom) return
-        const pos = Math.max(1, root.effectiveDepthPosition(widget.configEntryName) - 1)
-        const entry = root.widgetEntryFromConfig(widget.configEntryName)
-        if (!entry) return
-        entry.depthLayerPosition = pos
-        if (root.isCustomWidgetKey(widget.configEntryName)) root.persistCustomWidget(entry)
+        const key = widget.configEntryName
+        if (root.effectiveDepthPosition(key) > 1) {
+            const entry = root.widgetEntryFromConfig(key)
+            if (!entry) return
+            entry.depthLayerPosition = root.effectiveDepthPosition(key) - 1
+            if (root.isCustomWidgetKey(key)) root.persistCustomWidget(entry)
+        } else {
+            root._reorderStack(key, false)
+        }
     }
 
     function clearSelection() {
