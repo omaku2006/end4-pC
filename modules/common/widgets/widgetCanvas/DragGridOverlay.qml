@@ -20,24 +20,34 @@ Item {
     readonly property bool gridVisible: canvas.gridVisible
 
     Repeater {
-        model: root.gridVisible ? Math.ceil(root.width / canvas.gridSize) : 0
-        delegate: Rectangle {
+        id: crossRepeater
+        readonly property int cols: Math.ceil(root.width / canvas.gridSize) + 1
+        readonly property int rows: Math.ceil(root.height / canvas.gridSize) + 1
+        model: root.gridVisible ? cols * rows : 0
+        delegate: Item {
+            id: crossPoint
             required property int index
-            x: index * canvas.gridSize
-            width: 1
-            height: root.height
-            color: Appearance.colors.colLayer0Border
-        }
-    }
+            readonly property int col: index % crossRepeater.cols
+            readonly property int row: Math.floor(index / crossRepeater.cols)
+            readonly property int crossSize: 5
 
-    Repeater {
-        model: root.gridVisible ? Math.ceil(root.height / canvas.gridSize) : 0
-        delegate: Rectangle {
-            required property int index
-            y: index * canvas.gridSize
-            width: root.width
-            height: 1
-            color: Appearance.colors.colLayer0Border
+            x: col * canvas.gridSize - crossSize / 2
+            y: row * canvas.gridSize - crossSize / 2
+            width: crossSize
+            height: crossSize
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: crossPoint.crossSize
+                height: 1
+                color: Appearance.colors.colLayer0Border
+            }
+            Rectangle {
+                anchors.centerIn: parent
+                width: 1
+                height: crossPoint.crossSize
+                color: Appearance.colors.colLayer0Border
+            }
         }
     }
 

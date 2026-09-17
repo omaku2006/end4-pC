@@ -457,6 +457,13 @@ Singleton {
                     property int swapWarningThreshold: 85
                     property int cpuWarningThreshold: 90
                 }
+
+                property JsonObject dynamicIsland: JsonObject {
+                    property string visualizerStyle: "dots" // "dots", "wave", "none"
+                    property bool showMediaControls: false
+                    property string leftWidget: "none"
+                    property string rightWidget: "none"
+                }
                 property JsonObject divider: JsonObject {
                     property string style: "rect" // rect - dot - space
                     property int spacing: 20
@@ -504,6 +511,7 @@ Singleton {
                     }
                 }
                 property JsonObject tooltips: JsonObject {
+                    property bool enable: true
                     property bool clickToShow: false
                 }
                 property JsonObject media: JsonObject {

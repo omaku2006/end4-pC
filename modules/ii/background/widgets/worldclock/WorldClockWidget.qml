@@ -328,6 +328,11 @@ AbstractBackgroundWidget {
                         // True scene backdrop blur behind the transparent
                         // analog face (same frosted design as before, now
                         // sampling the real behind-content incl. depth layers).
+                        StyledRectangularShadow {
+                            target: androidClock
+                            z: -2
+                        }
+
                         WidgetBackdropBlur {
                             anchors.fill: parent
                             cardRadius: Appearance.rounding?.verylarge ?? 30
@@ -338,6 +343,7 @@ AbstractBackgroundWidget {
                         }
 
                         AndroidClock {
+                            id: androidClock
                             anchors.fill: parent
                             radius: Appearance.rounding?.verylarge ?? 30
 
