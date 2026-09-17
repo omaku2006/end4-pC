@@ -68,18 +68,30 @@ apply_anyterm() {
 
   sed -i "s/\$alpha/$term_alpha/g" "$STATE_DIR/user/generated/terminal/sequences.txt"
 
-  for file in /dev/pts/*; do
-    if [[ $file =~ ^/dev/pts/[0-9]+$ ]]; then
-      {
-      cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file"
-      } & disown || true
-    fi
-  done
+  # Target only the current controlling terminal instead of blasting
+  # every /dev/pts/*; the caller's tty already knows which terminal
+  # wants the palette, and writing to unrelated PTYs is what makes the
+  # OSC sequences appear as stray output (e.g. when opening a video).
+  local tty_dev
+  tty_dev=$(tty 2>/dev/null)
+  if [[ -n "$tty_dev" && "$tty_dev" =~ ^/dev/pts/[0-9]+$ ]]; then
+    cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$tty_dev" & disown || true
+  else
+    # Fallback when there is no controlling terminal: apply to all PTYs.
+    for file in /dev/pts/*; do
+      if [[ $file =~ ^/dev/pts/[0-9]+$ ]]; then
+        cat "$STATE_DIR"/user/generated/terminal/sequences.txt >"$file" & disown || true
+      fi
+    done
+  fi
 }
 
 apply_term() {
   apply_kitty
-  apply_anyterm
+  # Kitty is already themed via kitty-theme.conf + SIGUSR1. Skip the
+  # raw-OSC write so it does not blast every /dev/pts/* with palette
+  # sequences (which is what makes them appear when opening a video).
+  pidof kitty >/dev/null 2>&1 || apply_anyterm
 }
 
 apply_qt() {
