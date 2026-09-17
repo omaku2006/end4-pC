@@ -326,14 +326,15 @@ ContentSection {
                                 buttonIcon: "text_fields"
                                 text: Translation.tr("Text")
                                 placeholderText: Translation.tr("Hello World · EEEE, dd MMMM yyyy · HH:mm")
-                                value: card.e?.text ?? ""
+                                modelSync: true
+                                modelValue: card.e?.text ?? ""
                                 Timer {
                                     id: textDebounce
                                     interval: 600
                                     repeat: false
                                     onTriggered: root.setField(card.modelData, "text", textField.value)
                                 }
-                                onValueChanged: textDebounce.restart()
+                                onValueChanged: if (!textField.applyingModel) textDebounce.restart()
                             }
 
                             Flow {
@@ -454,9 +455,10 @@ ContentSection {
                                 fieldHeight: 40
                                 buttonIcon: "colorize"
                                 text: Translation.tr("Text color hex")
-                                placeholderText: Translation.tr("#RRGGBB or theme role")
-                                value: card.e?.textColor ?? ""
-                                onValueChanged: textColorDebounce.restart()
+                                placeholderText: Translation.tr("#RRGGBBAA or theme role")
+                                modelSync: true
+                                modelValue: card.e?.textColor ?? ""
+                                onValueChanged: if (!textColorField.applyingModel) textColorDebounce.restart()
                                 Timer {
                                     id: textColorDebounce
                                     interval: 600
@@ -485,9 +487,10 @@ ContentSection {
                                     fieldHeight: 40
                                     buttonIcon: "colorize"
                                     text: Translation.tr("Outline color hex")
-                                    placeholderText: Translation.tr("#RRGGBB or theme role")
-                                    value: card.e?.outlineColor ?? ""
-                                    onValueChanged: outlineColorDebounce.restart()
+                                    placeholderText: Translation.tr("#RRGGBBAA or theme role")
+                                    modelSync: true
+                                    modelValue: card.e?.outlineColor ?? ""
+                                    onValueChanged: if (!outlineColorField.applyingModel) outlineColorDebounce.restart()
                                     Timer {
                                         id: outlineColorDebounce
                                         interval: 600
@@ -565,8 +568,9 @@ ContentSection {
                                     buttonIcon: "font_download"
                                     text: Translation.tr("Google Font")
                                     placeholderText: Translation.tr("e.g. Roboto Mono, Space Grotesk")
-                                    value: card.e?.fontFamily ?? ""
-                                    onValueChanged: googleFontDebounce.restart()
+                                    modelSync: true
+                                    modelValue: card.e?.fontFamily ?? ""
+                                    onValueChanged: if (!googleFontField.applyingModel) googleFontDebounce.restart()
                                     Timer {
                                         id: googleFontDebounce
                                         interval: 600
@@ -614,8 +618,9 @@ ContentSection {
                                     fieldHeight: 40
                                     buttonIcon: "swap_horiz"
                                     text: Translation.tr("X (center)")
-                                    value: root.posDisplay(card.modelData, "x", card.e?.xUnit ?? "px")
-                                    onValueChanged: xDebounce.restart()
+                                    modelSync: true
+                                    modelValue: root.posDisplay(card.modelData, "x", card.e?.xUnit ?? "px")
+                                    onValueChanged: if (!xField.applyingModel) xDebounce.restart()
                                     Timer {
                                         id: xDebounce
                                         interval: 600
@@ -646,8 +651,9 @@ ContentSection {
                                     fieldHeight: 40
                                     buttonIcon: "swap_vert"
                                     text: Translation.tr("Y (center)")
-                                    value: root.posDisplay(card.modelData, "y", card.e?.yUnit ?? "px")
-                                    onValueChanged: yDebounce.restart()
+                                    modelSync: true
+                                    modelValue: root.posDisplay(card.modelData, "y", card.e?.yUnit ?? "px")
+                                    onValueChanged: if (!yField.applyingModel) yDebounce.restart()
                                     Timer {
                                         id: yDebounce
                                         interval: 600
@@ -723,9 +729,10 @@ ContentSection {
                                     fieldHeight: 40
                                     buttonIcon: "colorize"
                                     text: Translation.tr("Badge color hex")
-                                    placeholderText: Translation.tr("#RRGGBB or theme role")
-                                    value: card.e?.badgeColor ?? ""
-                                    onValueChanged: badgeColorDebounce.restart()
+                                    placeholderText: Translation.tr("#RRGGBBAA or theme role")
+                                    modelSync: true
+                                    modelValue: card.e?.badgeColor ?? ""
+                                    onValueChanged: if (!badgeColorField.applyingModel) badgeColorDebounce.restart()
                                     Timer {
                                         id: badgeColorDebounce
                                         interval: 600
@@ -769,8 +776,9 @@ ContentSection {
                                     buttonIcon: "colorize"
                                     text: Translation.tr("Badge outline color hex")
                                     placeholderText: Translation.tr("#RRGGBBAA or theme role")
-                                    value: card.e?.badgeOutlineColor ?? ""
-                                    onValueChanged: badgeOutlineColorDebounce.restart()
+                                    modelSync: true
+                                    modelValue: card.e?.badgeOutlineColor ?? ""
+                                    onValueChanged: if (!badgeOutlineColorField.applyingModel) badgeOutlineColorDebounce.restart()
                                     Timer {
                                         id: badgeOutlineColorDebounce
                                         interval: 600

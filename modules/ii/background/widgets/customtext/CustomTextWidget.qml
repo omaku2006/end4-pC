@@ -3,12 +3,14 @@ pragma ComponentBehavior: Unbound
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
+import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
+import qs.modules.common.functions
 import qs.modules.ii.background.widgets
 
 /**
@@ -84,7 +86,7 @@ AbstractBackgroundWidget {
     function resolveColorName(key, fallback) {
         if (!key) return fallback
         const k = String(key)
-        if (k.startsWith("#")) return k
+        if (k.startsWith("#")) return ColorUtils.normalizeHexColor(k)
         const propName = "col" + k.charAt(0).toUpperCase() + k.slice(1)
         return Appearance.colors[propName] ?? fallback
     }
@@ -271,38 +273,91 @@ AbstractBackgroundWidget {
             }
         }
 
-        // Configurable text outline: Qt's Text.Outline style is a fixed
-        // 1px edge with no width control, so outlined mode is rendered as
-        // 8 offset copies (compass directions, distance = outlineWidth) in
-        // the outline color behind the main text. Fully declarative, so the
-        // width slider updates live. Main text stays Normal to avoid a
-        // double edge.
-        Repeater {
+        // Configurable text outline. Qt's Text.Outline style is a fixed 1px
+        // edge with no width control, so outlined mode renders 8 offset glyph
+        // copies (compass directions, distance = outlineWidth) and then masks
+        // the glyph itself out of them. The mask is inverted, so the copies
+        // survive only OUTSIDE the glyph: the stroke is genuinely hollow, and a
+        // transparent text fill (e.g. #RRGGBBAA with alpha 00) leaves just the
+        // outline instead of a solid silhouette. With an opaque fill the look
+        // is identical to a plain offset stroke, since the fill covers the
+        // glyph area anyway. Fully declarative: width/font/colour update live.
+        // Main text stays Normal to avoid a double edge.
+        Item {
             id: textOutlineLayer
-            model: (!root.fontSolid && root.outlineWidth > 0)
-                ? [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1},
-                   {dx: 1, dy: 1}, {dx: 1, dy: -1}, {dx: -1, dy: 1}, {dx: -1, dy: -1}]
-                : []
-            delegate: Text {
-                required property var modelData
-                x: textItem.x + modelData.dx * root.outlineWidth
-                y: textItem.y + modelData.dy * root.outlineWidth
-                width: textItem.width
-                height: textItem.height
-                text: root.displayText
-                color: root.resolveColorName(root.outlineColorName, Appearance.colors.colShadow)
-                opacity: root.textOpacity
-                font.family: root.resolvedFamily
-                font.pixelSize: root.effectiveFontSize
-                font.weight: root.fontWeight
-                font.letterSpacing: root.letterSpacing
-                font.italic: root.fontItalic
-                horizontalAlignment: textItem.horizontalAlignment
-                verticalAlignment: Text.AlignVCenter
-                wrapMode: Text.WordWrap
-                lineHeight: root.lineHeight
-                lineHeightMode: Text.ProportionalHeight
-                renderType: Text.NativeRendering
+            x: textItem.x - root.outlineWidth
+            y: textItem.y - root.outlineWidth
+            width: textItem.width + root.outlineWidth * 2
+            height: textItem.height + root.outlineWidth * 2
+            visible: !root.fontSolid && root.outlineWidth > 0
+
+            // The 8 offset copies. Hidden: only the effect below draws them.
+            Item {
+                id: textOutlineCopies
+                anchors.fill: parent
+                visible: false
+                Repeater {
+                    model: [{dx: 1, dy: 0}, {dx: -1, dy: 0}, {dx: 0, dy: 1}, {dx: 0, dy: -1},
+                            {dx: 1, dy: 1}, {dx: 1, dy: -1}, {dx: -1, dy: 1}, {dx: -1, dy: -1}]
+                    delegate: Text {
+                        required property var modelData
+                        x: root.outlineWidth + modelData.dx * root.outlineWidth
+                        y: root.outlineWidth + modelData.dy * root.outlineWidth
+                        width: textItem.width
+                        height: textItem.height
+                        text: root.displayText
+                        color: root.resolveColorName(root.outlineColorName, Appearance.colors.colShadow)
+                        opacity: root.textOpacity
+                        font.family: root.resolvedFamily
+                        font.pixelSize: root.effectiveFontSize
+                        font.weight: root.fontWeight
+                        font.letterSpacing: root.letterSpacing
+                        font.italic: root.fontItalic
+                        horizontalAlignment: textItem.horizontalAlignment
+                        verticalAlignment: Text.AlignVCenter
+                        wrapMode: Text.WordWrap
+                        lineHeight: root.lineHeight
+                        lineHeightMode: Text.ProportionalHeight
+                        renderType: Text.NativeRendering
+                    }
+                }
+            }
+
+            // Mask: the un-offset glyph. Inverted in the effect so the copies
+            // are clipped away wherever the glyph paints.
+            Item {
+                id: textOutlineMask
+                anchors.fill: parent
+                visible: false
+                layer.enabled: true
+                Text {
+                    x: root.outlineWidth
+                    y: root.outlineWidth
+                    width: textItem.width
+                    height: textItem.height
+                    text: root.displayText
+                    color: "white"
+                    font.family: root.resolvedFamily
+                    font.pixelSize: root.effectiveFontSize
+                    font.weight: root.fontWeight
+                    font.letterSpacing: root.letterSpacing
+                    font.italic: root.fontItalic
+                    horizontalAlignment: textItem.horizontalAlignment
+                    verticalAlignment: Text.AlignVCenter
+                    wrapMode: Text.WordWrap
+                    lineHeight: root.lineHeight
+                    lineHeightMode: Text.ProportionalHeight
+                    renderType: Text.NativeRendering
+                }
+            }
+
+            MultiEffect {
+                anchors.fill: parent
+                source: textOutlineCopies
+                maskEnabled: true
+                maskSource: textOutlineMask
+                maskInverted: true
+                autoPaddingEnabled: false
             }
         }
 
