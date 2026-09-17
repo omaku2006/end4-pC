@@ -161,7 +161,7 @@ WidgetsLoader {
     // panels, menus, popups, notifications or any normal window/fullscreen app.
     Timer {
         id: cursorPollTimer
-        interval: 100
+        interval: 200
         repeat: true
         running: Config.options.background.depthEffect.enable
                  && Config.options.background.depthEffect.mouseParallax
