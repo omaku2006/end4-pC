@@ -8,6 +8,7 @@ import qs.modules.common.widgets.widgetCanvas
 
 import qs.modules.ii.background.widgets
 import qs.modules.ii.background.widgets.clock
+import qs.modules.ii.background.widgets.customtext
 import qs.modules.ii.background.widgets.weather
 import qs.modules.ii.background.widgets.media
 import qs.modules.ii.background.widgets.images
@@ -26,6 +27,7 @@ Item {
     required property var screen
     required property var wallpaperItem
     required property bool wallpaperSafetyTriggered
+    required property var canvas
 
     readonly property bool onThisScreen: Config.options.background.screenList.length === 0
         || Config.options.background.screenList.includes(root.screen.name)
@@ -52,6 +54,25 @@ Item {
             required property var modelData
 
             property bool enableLoading: true
+            property bool wasEnabled: Config.options.background.widgets[loaderDelegate.modelData.key].enable
+            // Whenever a widget is toggled ON, reset it to the default
+            // depth position (above the highest wallpaper layer) — this
+            // replaces the obsolete "bringToFront" enable behaviour, but now
+            // relative to the depth wallpaper layers instead of other widgets.
+            Connections {
+                target: Config.options.background.widgets[loaderDelegate.modelData.key]
+                function onEnableChanged() {
+                    const now = Config.options.background.widgets[loaderDelegate.modelData.key].enable
+                    if (!loaderDelegate.wasEnabled && now) {
+                        Config.options.background.widgets[loaderDelegate.modelData.key].depthLayerPosition = -1
+                    }
+                    loaderDelegate.wasEnabled = now
+                }
+            }
+            // Widgets are hosted in the depth wallpaper container so their z
+            // can sit between wallpaper layers; the canvas is passed explicitly
+            // (they are no longer children of it).
+            canvas: root.canvas
 
             shown: Config.options.background.widgets[loaderDelegate.modelData.key].enable
                 && loaderDelegate.enableLoading
@@ -95,6 +116,38 @@ Item {
         }
     }
 
+    // Fully independent user-defined text widgets. Each id in customWidgetIds
+    // maps to an entry in widgets.customWidgets. A whole-list reassignment
+    // (CustomWidgets.save) drives reactivity, so shown/enable just read the
+    // resolved entry.
+    Repeater {
+        id: customWidgetRepeater
+        model: Config.options.background.widgets.customWidgetIds
+
+        delegate: FadeLoader {
+            id: customWidgetLoader
+            required property string modelData
+
+            canvas: root.canvas
+            shown: ((Config.options.background.widgets.customWidgets ?? [])
+                .find(w => w?.id === customWidgetLoader.modelData)?.enable ?? false)
+                && root.onThisScreen
+
+            sourceComponent: Component {
+                CustomTextWidget {
+                    configEntryName: customWidgetLoader.modelData
+                    screenWidth: root.screen.width
+                    screenHeight: root.screen.height
+                    scaledScreenWidth: root.screen.width
+                    scaledScreenHeight: root.screen.height
+                    wallpaperScale: 1
+                    wallpaperItem: root.wallpaperItem
+                    backdropHost: root
+                }
+            }
+        }
+    }
+
     Component {
         id: visualizerComp
         VisualizerWidget {
@@ -116,6 +169,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -127,6 +181,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -138,6 +193,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -150,6 +206,7 @@ Item {
             wallpaperScale: 1
             wallpaperSafetyTriggered: root.wallpaperSafetyTriggered
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -161,6 +218,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -172,6 +230,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -183,6 +242,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -194,6 +254,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -205,6 +266,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -216,6 +278,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -227,6 +290,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
     Component {
@@ -238,6 +302,7 @@ Item {
             scaledScreenHeight: root.screen.height
             wallpaperScale: 1
             wallpaperItem: root.wallpaperItem
+            backdropHost: root
         }
     }
 }

@@ -11,6 +11,11 @@ MouseArea {
     property bool centerXActive: false
     property bool centerYActive: false
 
+    // The item that paints the drag feedback (grid/center/selection/flash
+    // lines). WidgetCanvas owns the interaction state; the visual host is
+    // elevated above the depth wallpaper container by Background.qml.
+    property Item visualHost: null
+
     property var registeredWidgets: []
     property bool selecting: false
     property point selectionStartPoint: Qt.point(0, 0)
@@ -41,13 +46,80 @@ MouseArea {
         root.registeredWidgets = root.registeredWidgets.filter(w => w !== widget)
     }
 
-    function bringToFront(widget) {
-        if (widget.pinnedBottom) return
-        let maxZ = 0
-        for (const w of root.registeredWidgets) {
-            if (w !== widget && !w.pinnedBottom && w.z > maxZ) maxZ = w.z
+    // Widgets are positioned RELATIVE to the depth wallpaper layers, so the
+    // canvas no longer maintains a widget-to-widget stack. Movement is a pure
+    // layer-relative operation: forward = one layer toward the front.
+    readonly property real depthLayerCount: Math.max(1, (Config.options.background.depthEffect.layers ?? []).length)
+
+    function widgetByConfigName(key) {
+        return root.registeredWidgets.find(w => w.configEntryName === key)
+    }
+
+    // Resolve the config object for any widget key: custom widgets live in
+    // the customWidgets array (keyed by their id), everything else in the
+    // keyed widgets object.
+    function widgetEntryFromConfig(key) {
+        const ids = Config.options.background.widgets.customWidgetIds ?? []
+        if (ids.includes(key)) {
+            const list = Config.options.background.widgets.customWidgets ?? []
+            return list.find(w => w?.id === key) ?? null
         }
-        widget.z = maxZ + 1
+        return Config.options.background.widgets[key]
+    }
+
+    // list<var> entries are persisted/reactive only after a whole-list
+    // reassignment (same pattern the depth-effect settings use for layers).
+    function persistCustomWidget(entry) {
+        if (!entry?.id) return
+        const list = (Config.options.background.widgets.customWidgets ?? [])
+            .map(w => (w.id === entry.id ? entry : w))
+        Config.options.background.widgets.customWidgets = list
+    }
+
+    function isCustomWidgetKey(key) {
+        return (Config.options.background.widgets.customWidgetIds ?? []).includes(key)
+    }
+
+    // Effective "above layer k-1" position for a widget. Out-of-range or
+    // unset (-1) values mean the default = above the highest layer.
+    function effectiveDepthPosition(key) {
+        const entry = root.widgetEntryFromConfig(key)
+        const raw = entry?.depthLayerPosition ?? -1
+        return (raw > 0 && raw <= root.depthLayerCount) ? raw : root.depthLayerCount
+    }
+
+    function canMoveFront(key) {
+        if (root.widgetByConfigName(key)?.pinnedBottom) return false
+        const w = root.widgetByConfigName(key)
+        return root.effectiveDepthPosition(key) < root.depthLayerCount
+    }
+
+    function canMoveBack(key) {
+        if (root.widgetByConfigName(key)?.pinnedBottom) return false
+        return root.effectiveDepthPosition(key) > 1
+    }
+
+    // Move the widget one wallpaper layer toward the front. Stops at the
+    // position above the highest wallpaper layer.
+    function moveLayerFront(widget) {
+        if (widget?.pinnedBottom) return
+        const pos = Math.min(root.depthLayerCount, root.effectiveDepthPosition(widget.configEntryName) + 1)
+        const entry = root.widgetEntryFromConfig(widget.configEntryName)
+        if (!entry) return
+        entry.depthLayerPosition = pos
+        if (root.isCustomWidgetKey(widget.configEntryName)) root.persistCustomWidget(entry)
+    }
+
+    // Move the widget one wallpaper layer toward the back. The first click
+    // from the default (above-highest) position drops it right behind the
+    // highest layer; it can never go below the background layer.
+    function moveLayerBack(widget) {
+        if (widget?.pinnedBottom) return
+        const pos = Math.max(1, root.effectiveDepthPosition(widget.configEntryName) - 1)
+        const entry = root.widgetEntryFromConfig(widget.configEntryName)
+        if (!entry) return
+        entry.depthLayerPosition = pos
+        if (root.isCustomWidgetKey(widget.configEntryName)) root.persistCustomWidget(entry)
     }
 
     function clearSelection() {
@@ -121,108 +193,8 @@ MouseArea {
         root.selecting = false
     }
 
-    Repeater {
-        model: root.gridVisible ? Math.ceil(root.width / root.gridSize) : 0
-        delegate: Rectangle {
-            required property int index
-            x: index * root.gridSize
-            width: 1
-            height: root.height
-            color: Appearance.colors.colLayer0Border
-        }
-    }
-
-    Repeater {
-        model: root.gridVisible ? Math.ceil(root.height / root.gridSize) : 0
-        delegate: Rectangle {
-            required property int index
-            y: index * root.gridSize
-            width: root.width
-            height: 1
-            color: Appearance.colors.colLayer0Border
-        }
-    }
-
-    Rectangle {
-        id: centerLineV
-        visible: root.gridVisible
-        x: root.width / 2 - width / 2
-        width: root.centerXActive ? 2 : 1
-        height: root.height
-        color: root.centerXActive ? Appearance.colors.colPrimary : Appearance.colors.colLayer0Border
-        opacity: root.centerXActive ? 1 : 0.6
-
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-        Behavior on width {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-    }
-
-    Rectangle {
-        id: centerLineH
-        visible: root.gridVisible
-        y: root.height / 2 - height / 2
-        width: root.width
-        height: root.centerYActive ? 2 : 1
-        color: root.centerYActive ? Appearance.colors.colPrimary : Appearance.colors.colLayer0Border
-        opacity: root.centerYActive ? 1 : 0.6
-
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-        Behavior on height {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-        Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
-        }
-    }
-
-    Rectangle {
-        id: selectionRectVisual
-        visible: root.selecting
-        x: root.selectionRect.x
-        y: root.selectionRect.y
-        width: root.selectionRect.width
-        height: root.selectionRect.height
-        color: Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.15)
-        border.width: 1
-        border.color: Appearance.colors.colPrimary
-        z: 9999
-    }
-
-    Component {
-        id: flashLineComponent
-        Rectangle {
-            id: flashLine
-            property bool vertical: true
-            property real linePos: 0
-            color: Appearance.colors.colPrimary
-            x: vertical ? linePos : 0
-            y: vertical ? 0 : linePos
-            width: vertical ? 2 : root.width
-            height: vertical ? root.height : 2
-
-            NumberAnimation on opacity {
-                from: 0.9
-                to: 0
-                duration: 2000
-                easing.type: Easing.OutCubic
-                running: true
-                onFinished: flashLine.destroy()
-            }
-        }
-    }
-
     function flashLines(verticalPositions, horizontalPositions) {
-        for (let i = 0; i < verticalPositions.length; i++)
-            flashLineComponent.createObject(root, { vertical: true, linePos: verticalPositions[i] })
-        for (let i = 0; i < horizontalPositions.length; i++)
-            flashLineComponent.createObject(root, { vertical: false, linePos: horizontalPositions[i] })
+        if (root.visualHost)
+            root.visualHost.flashLines(verticalPositions, horizontalPositions)
     }
 }

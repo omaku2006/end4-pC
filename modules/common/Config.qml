@@ -220,7 +220,7 @@ Singleton {
                 property string borderColor: "layer0Border"
             }
 
-            property JsonObject background: JsonObject {
+             property JsonObject background: JsonObject {
                 property string lockWall: ""
                 property bool widgetsLocked: false
                 property bool showGrid: true
@@ -228,16 +228,27 @@ Singleton {
                 property string splitRatio: "100" // 25 50 100
                 property string splitSide: "left"
                 property bool showSnapLines: true
+                property JsonObject depthEffect: JsonObject {
+                    property bool enable: false
+                    property bool mouseParallax: true
+                    property bool workspaceParallax: true
+                    property int workspaceParallaxSupportNumber: 5
+                    property list<var> layers: [
+                        { name: "background", image: "", scale: 150, autoScale: false, bound: true, parallaxEnabled: true, parallaxSensitivity: 1, reverseParallax: false, workspaceParallax: true, workspaceParallaxSensitivity: 1, mouseParallax: true, manualPositioning: false, positionX: 0, positionY: 0 }
+                    ]
+                }
                 property JsonObject widgets: JsonObject {
                     property bool blurWidgets: false
                     property real blurRadius: 32
+                    property list<var> customWidgetIds: []
+                    property list<var> customWidgets: []
                     property JsonObject clock: JsonObject {
                         property bool enable: true
                         property bool showOnlyWhenLocked: false
                         property string placementStrategy: "leastBusy" // "free", "leastBusy", "mostBusy"
                         property real x: 100
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property string style: "cookie"        // Options: "cookie", "digital"
                         property string color: ""
                         property string styleLocked: "cookie"  // Options: "cookie", "digital"
@@ -282,7 +293,7 @@ Singleton {
                         property string placementStrategy: "free" // "free", "leastBusy", "mostBusy"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property string sizeMode: "1x3"
                         property bool expanded: false
                     }
@@ -292,7 +303,7 @@ Singleton {
                         property string placementStrategy: "free" // "free", "leastBusy", "mostBusy"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property string sizeMode: "2x2"
                     }
                     property JsonObject worldClock: JsonObject {
@@ -301,7 +312,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property string sizeMode: "2x2"
                         property int clockCount: 4 
                     }
@@ -311,7 +322,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                     }
 
                     property JsonObject todo: JsonObject {
@@ -319,7 +330,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                     }
 
                     property JsonObject userCard: JsonObject {
@@ -327,7 +338,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property string sizeMode: "1x2" 
                     }
 
@@ -336,7 +347,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                     }
 
                     property JsonObject visualizer: JsonObject {
@@ -344,7 +355,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 0
                         property real y: 0
-                        property real z: -1000
+                        property real depthLayerPosition: -1
                     }
 
                     property JsonObject customImage: JsonObject {
@@ -352,7 +363,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property string path: ""
                         property string shape: "Cookie4Sided"
                         property real size: 200
@@ -363,7 +374,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property bool vertical: false
                     }
 
@@ -372,7 +383,7 @@ Singleton {
                         property string placementStrategy: "free"
                         property real x: 400
                         property real y: 100
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property bool vertical: false
                     }
 
@@ -385,7 +396,7 @@ Singleton {
                         property string placementStrategy: "free" // "free", "leastBusy", "mostBusy"
                         property real x: 800
                         property real y: 500
-                        property real z: 0
+                        property real depthLayerPosition: -1
                         property string sizeMode: "1x3" 
                     }
                 }

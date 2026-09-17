@@ -49,6 +49,7 @@ RowLayout {
         spacing: 0
         StyledText {
             Layout.fillWidth: true
+            Layout.minimumWidth: 0
             text: root.text
             color: root.colLabel
             opacity: root.enabled ? 1 : 0.4

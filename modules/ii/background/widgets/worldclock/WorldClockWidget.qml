@@ -80,18 +80,18 @@ AbstractBackgroundWidget {
         Rectangle {
             id: contentRect
             anchors.fill: parent
-            color: sizeMode === "4x1" ? "transparent" : Appearance.colors.colPrimaryContainer
+            // Real translucency over the live scene behind (plain or depth
+            // wallpaper) — no wallpaper sampling, so nothing stale can show through.
+            color: sizeMode === "4x1" ? "transparent" : ColorUtils.applyAlpha(Appearance.colors.colPrimaryContainer, 0.75)
             radius: Appearance.rounding?.verylarge ?? 30
 
-            FastBlurred {
+            // True scene backdrop blur (wallpaper + depth layers below this
+            // card) over the translucent fill above. The fill stays untouched,
+            // so real transparency survives wherever blur shows nothing.
+            WidgetBackdropBlur {
                 anchors.fill: parent
-                blurSource: root.wallpaperItem
                 cardRadius: contentRect.radius
-                tint: Appearance.colors.colLayer1
-                tintOpacity: 0.55
-                trackX: root.x  
-                trackY: root.y
-                visible: Config.options.background.widgets.blurWidgets && sizeMode === "2x2"
+                backdropSources: root.backdropSources
             }
 
             // 2x2
@@ -325,28 +325,23 @@ AbstractBackgroundWidget {
                         Layout.preferredWidth: 132
                         Layout.preferredHeight: 120
 
-                        FastBlurred {
+                        // True scene backdrop blur behind the transparent
+                        // analog face (same frosted design as before, now
+                        // sampling the real behind-content incl. depth layers).
+                        WidgetBackdropBlur {
                             anchors.fill: parent
-                            visible: Config.options.background.widgets.blurWidgets
-                            blurSource: root.wallpaperItem
                             cardRadius: Appearance.rounding?.verylarge ?? 30
                             tint: (clockWrapper.cityData?.isDay ?? true)
                                 ? Appearance.colors.colPrimary
                                 : Appearance.colors.colLayer0
-                            tintOpacity: 0.55
-                            trackX: root.x
-                            trackY: root.y
+                            backdropSources: root.backdropSources
                         }
 
                         AndroidClock {
                             anchors.fill: parent
                             radius: Appearance.rounding?.verylarge ?? 30
 
-                            backgroundColor: Config.options.background.widgets.blurWidgets
-                                ? "transparent"
-                                : ((clockWrapper.cityData?.isDay ?? true)
-                                    ? Appearance.colors.colPrimary
-                                    : Appearance.colors.colPrimaryContainer)
+                            backgroundColor: "transparent"
                             handColor: (clockWrapper.cityData?.isDay ?? true)
                                 ? Appearance.colors.colOnPrimary
                                 : Appearance.colors.colOnLayer0
